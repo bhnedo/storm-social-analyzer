@@ -35,9 +35,9 @@ public class StatusSplittingBolt implements IRichBolt {
 			
 			String status = input.getString(0);
 			Iterator<String> segments = Splitter.on(" ")
-											.trimResults()
-											.omitEmptyStrings()
-											.split(status).iterator();
+							.trimResults()
+							.omitEmptyStrings()
+							.split(status).iterator();
 			while( segments.hasNext() ) {
 				String segment = segments.next().toLowerCase();
 				if ( segment.length() > 4 )
