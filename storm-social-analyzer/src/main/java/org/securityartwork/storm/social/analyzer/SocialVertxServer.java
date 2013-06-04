@@ -21,7 +21,7 @@ public class SocialVertxServer {
 	public void start() {
 		
 	    Vertx vertx = Vertx.newVertx();
-		vertx.createHttpServer().websocketHandler( callback ).listen(9998, "localhost");
+	    vertx.createHttpServer().websocketHandler( callback ).listen(9998, "localhost");
 		
 	}
 	
