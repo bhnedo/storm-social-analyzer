@@ -33,9 +33,9 @@ public class StatusSegmentatorBolt implements IRichBolt {
 	private OutputCollector collector;
 	private SortedMultiset<String> counters = TreeMultiset.create();
 	
-    private transient VerticleWebSocketCallback callback;
+        private transient VerticleWebSocketCallback callback;
     
-    @Override
+        @Override
 	public void prepare(Map stormConf, TopologyContext context,
 			OutputCollector collector) {
 		this.collector = collector;
