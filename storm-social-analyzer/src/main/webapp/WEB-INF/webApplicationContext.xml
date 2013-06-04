@@ -67,17 +67,17 @@
 		<!-- End AMQP -->
 		
 	 	<!-- Data --> 
-        <jdbc:embedded-database id="dataSource" type="H2">
-        	 <jdbc:script location="classpath:/org/springframework/social/connect/jdbc/JdbcUsersConnectionRepository.sql" />  
-        </jdbc:embedded-database>
-        <!-- End Data -->
+	        <jdbc:embedded-database id="dataSource" type="H2">
+	        	 <jdbc:script location="classpath:/org/springframework/social/connect/jdbc/JdbcUsersConnectionRepository.sql" />  
+	        </jdbc:embedded-database>
+	        <!-- End Data -->
 	
 		<!-- MVC -->
 		<mvc:annotation-driven />
 		
 		<context:annotation-config/>
 	    
-	    <context:component-scan base-package="org.securityartwork.storm.social.analyzer.controller" />
+	    	<context:component-scan base-package="org.securityartwork.storm.social.analyzer.controller" />
 		
 		<bean id="jacksonMessageConverter" class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"></bean>
 		   
@@ -113,7 +113,7 @@
 		
 		<!-- Social -->
        
-        <bean id="connectionFactoryLocator" class="org.springframework.social.connect.support.ConnectionFactoryRegistry">
+        	<bean id="connectionFactoryLocator" class="org.springframework.social.connect.support.ConnectionFactoryRegistry">
 		    <property name="connectionFactories">
 		        <list>
 		            <bean class="org.springframework.social.facebook.connect.FacebookConnectionFactory">
