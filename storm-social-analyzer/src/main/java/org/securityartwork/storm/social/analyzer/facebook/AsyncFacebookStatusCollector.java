@@ -39,9 +39,9 @@ public class AsyncFacebookStatusCollector implements AsyncFacebookSocialCollecto
 		
 		ExecutorService executor = Executors.newFixedThreadPool(friendIdsGroups.size());
 		
-	    for (final List<String> friendIds : friendIdsGroups) {
-	    	executor.execute(new Runnable() {
-	    		@Override
+	        for (final List<String> friendIds : friendIdsGroups) {
+	    		executor.execute(new Runnable() {
+	    			@Override
 				public void run() {
 					for ( String friendId : friendIds ) {
 						List<StatusPost> statuses = facebook.getApi().feedOperations().getStatuses( friendId, 0, STATUS_LIMIT );
@@ -58,8 +58,8 @@ public class AsyncFacebookStatusCollector implements AsyncFacebookSocialCollecto
 						
 					}
 				}
-	    	});
-	    }
+	    		});
+	    	}
 	}
 	
 	
