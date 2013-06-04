@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+         http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+         http://www.springframework.org/schema/security
+         http://www.springframework.org/schema/security/spring-security-3.1.xsd
+         http://www.springframework.org/schema/aop 
+         http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+         http://www.springframework.org/schema/jdbc
+		 http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd
+		 http://www.springframework.org/schema/rabbit
+         http://www.springframework.org/schema/rabbit/spring-rabbit-1.1.xsd">
+		
+		
+		<!-- Context -->
+		<bean class="org.securityartwork.storm.social.analyzer.context.AppContextProvider"></bean>
+		
+		<context:property-placeholder location="/WEB-INF/config.properties" />
+		<!-- End Context -->
+		
+		<!-- AMQP -->
+		<rabbit:connection-factory id="amqpConnectionFactory" />
+		
+		<rabbit:admin connection-factory="amqpConnectionFactory" />
+		
+		<rabbit:template id="rabbitTemplate" connection-factory="amqpConnectionFactory" message-converter="amqpJsonMessageConverter" /> 
+		
+		<rabbit:queue id="amqpCommandInputQueue" name="${amqp.social.input.queue}"></rabbit:queue>
+		
+		<rabbit:direct-exchange name="${amqp.social.input.exchange}">
+			<rabbit:bindings>
+				<rabbit:binding queue="amqpCommandInputQueue" key="${amqp.social.routing.key}"></rabbit:binding>
+			</rabbit:bindings>
+		</rabbit:direct-exchange>
+		
+		<bean id="amqpJsonMessageConverter" class="org.springframework.amqp.support.converter.JsonMessageConverter">
+			  <property name="classMapper">
+        		<bean class="org.springframework.amqp.support.converter.DefaultClassMapper">
+            		<property name="defaultType" value="org.securityartwork.storm.social.analyzer.common.Status"></property>
+        		</bean>
+    		</property> 
+		</bean>	
+		
+		<bean id="abstractAmqpComponent" class="org.securityartwork.storm.social.analyzer.amqp.AbstractAmqpComponent" 
+				abstract="true">
+				<property name="rabbitTemplate" ref="rabbitTemplate"></property>
+				<property name="amqpSocialInputExchange" value="${amqp.social.input.exchange}"></property>
+				<property name="amqpSocialRoutingKey" value="${amqp.social.routing.key}"></property>
+				<property name="amqpSocialInputQueue" value="${amqp.social.input.queue}"></property>
+		</bean>
+		
+		<bean id="socialAmqpInputProducer" class="org.securityartwork.storm.social.analyzer.amqp.impl.SocialAmqpInputProducerImpl"
+			 parent="abstractAmqpComponent">
+		</bean>
+		
+		<bean id="socialAmqpInputConsumer" class="org.securityartwork.storm.social.analyzer.amqp.impl.SocialAmqpInputConsumerImpl"
+			 parent="abstractAmqpComponent">
+		</bean>
+		<!-- End AMQP -->
+		
+	 	<!-- Data --> 
+        <jdbc:embedded-database id="dataSource" type="H2">
+        	 <jdbc:script location="classpath:/org/springframework/social/connect/jdbc/JdbcUsersConnectionRepository.sql" />  
+        </jdbc:embedded-database>
+        <!-- End Data -->
+	
+		<!-- MVC -->
+		<mvc:annotation-driven />
+		
+		<context:annotation-config/>
+	    
+	    <context:component-scan base-package="org.securityartwork.storm.social.analyzer.controller" />
+		
+		<bean id="jacksonMessageConverter" class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"></bean>
+		   
+		   <bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+			  <property name="messageConverters">
+				  <list>
+				    <ref bean="jacksonMessageConverter"/>
+				  </list>
+			  </property>
+		</bean>
+		
+		 <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+	        	<property name="prefix" value="/WEB-INF/views/" />
+	        	<property name="suffix" value=".jsp"/>
+	       </bean>
+		
+		<!-- End MVC -->
+	
+		<!-- Storm -->
+		<bean id="socialTopologyDeployer" class="org.securityartwork.storm.social.analyzer.SocialTopologyDeployer"
+			  init-method="deploy" 
+			  destroy-method="shutdown">
+		</bean>
+		<!-- Storm -->
+		
+		<!-- Vertx -->
+		<bean class="org.securityartwork.storm.social.analyzer.SocialVertxServer" init-method="start">
+			<property name="callback" ref="callback"></property>
+		</bean>
+		
+		<bean id="callback" class="org.securityartwork.storm.social.analyzer.VerticleWebSocketCallback"></bean>
+		<!-- End Vertx -->
+		
+		<!-- Social -->
+       
+        <bean id="connectionFactoryLocator" class="org.springframework.social.connect.support.ConnectionFactoryRegistry">
+		    <property name="connectionFactories">
+		        <list>
+		            <bean class="org.springframework.social.facebook.connect.FacebookConnectionFactory">
+		                <constructor-arg value="${facebook.client.id}" />
+		                <constructor-arg value="${facebook.client.secret}" />				
+		            </bean>
+		        </list>
+		    </property>
+		</bean>
+		
+		<bean id="textEncryptor" class="org.springframework.security.crypto.encrypt.Encryptors" factory-method="noOpText" />
+		
+		<bean id="usersConnectionRepository" class="org.springframework.social.connect.jdbc.JdbcUsersConnectionRepository">
+			<constructor-arg index="0" ref="dataSource"></constructor-arg>
+			<constructor-arg index="1" ref="connectionFactoryLocator"></constructor-arg>
+			<constructor-arg index="2" ref="textEncryptor"></constructor-arg>
+		</bean>
+		
+		<bean id="connectionRepository" factory-method="createConnectionRepository" 
+     			 factory-bean="usersConnectionRepository" scope="request">
+    		<constructor-arg value="#{request.userPrincipal.name}" /> 
+   			<aop:scoped-proxy proxy-target-class="false" />
+		</bean>
+		
+		<bean class="org.springframework.social.connect.web.ConnectController">
+   			<constructor-arg index="0" ref="connectionFactoryLocator"></constructor-arg>
+   			<constructor-arg index="1" ref="connectionRepository"></constructor-arg>
+   			<property name="applicationUrl" value="${social.application.url}" />
+		</bean>
+		
+		<bean id="signInAdapter" class="org.securityartwork.storm.social.analyzer.facebook.SpringSecurityFacebookSignInAdapter"></bean>
+		
+		
+		<bean id="asyncFacebookSocialCollector" class="org.securityartwork.storm.social.analyzer.facebook.AsyncFacebookStatusCollector">
+			<property name="socialAmqpInputProducer" ref="socialAmqpInputProducer"></property>
+		</bean>
+		<!-- End Social -->
+		
+		<!-- Security -->
+	
+		<bean id="passwordEncoder" class="org.springframework.security.crypto.password.NoOpPasswordEncoder" factory-method="getInstance"></bean>
+		
+		<security:http use-expressions="true">
+			<security:form-login login-page="/signin" login-processing-url="/signin/authenticate" authentication-failure-url="/signin?param.error=bad_credentials" />
+			<security:logout logout-url="/signout" delete-cookies="JSESSIONID" />
+			<security:intercept-url pattern="/favicon.ico" access="permitAll" />
+			<security:intercept-url pattern="/resources/**" access="permitAll" />
+			<security:intercept-url pattern="/signin/**" access="permitAll" />
+			<security:intercept-url pattern="/signup/**" access="permitAll" />
+			<security:intercept-url pattern="/disconnect/facebook" access="permitAll" />
+			<security:intercept-url pattern="/**" access="isAuthenticated()"  />
+		</security:http>
+		
+		<security:authentication-manager alias="authenticationManager">
+			<security:authentication-provider>
+				<!-- <security:password-encoder ref="passwordEncoder" />
+				<security:jdbc-user-service data-source-ref="dataSource" 
+								users-by-username-query="select username, password, true from Account where username = ?"
+								authorities-by-username-query="select username, 'ROLE_USER' from Account where username = ?"/> -->
+					<security:user-service>
+						<security:user name="storm" password="storm" authorities="ROLE_ADMIN"/>
+					</security:user-service>
+			</security:authentication-provider>  
+		</security:authentication-manager>
+		
+		<!-- End Security -->
+	
+</beans>
