@@ -9,5 +9,5 @@ Then the following topology is built:
    
    - AmqpStatusEmitterSpout: consumes messages from the queue and emits tuples with status and publisher.
    - StatusSplittingBolt: splits statuses into segments (words). 
-   - StatusSegmentatorBolt: count distinct segments and send them via websockets to browser to show top 20 most used words.
+   - StatusSegmentatorBolt: counts distinct segments and send them via websockets to browser to show up top 20 most used words.
 
