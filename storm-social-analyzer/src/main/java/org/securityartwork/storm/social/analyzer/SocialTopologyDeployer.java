@@ -34,7 +34,7 @@ public class SocialTopologyDeployer {
 		Config conf = new Config();
 		conf.setDebug(true);
 	
-		conf.put(Config.TOPOLOGY_MAX_SPOUT_PENDING, 1);
+		conf.put(Config.TOPOLOGY_MAX_SPOUT_PENDING, 1000);
 		
 		cluster.submitTopology( "social-topology", 
 				                conf, 
